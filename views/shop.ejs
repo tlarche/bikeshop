@@ -61,7 +61,7 @@
         <div class="col-1 d-none d-sm-block"><%=cards[i].total %>€</div>
         <div class="col-2 col-sm-1">
           <form action="/deleteItem" method="post">
-            <input type="hidden" name="id" value="<%=cards[i].id%>" class="form-control form-control-sm">
+            <input type="hidden" name="idCard" value="<%=cards[i].idCard%>" class="form-control form-control-sm">
             <button type="submit" class="btn btn-outline-info btn-sm" name="button">
               <i class="fa fa-trash-o" aria-hidden="true"></i>
             </button>
