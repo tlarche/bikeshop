@@ -5,13 +5,14 @@
 */
 var express = require('express');
 var router = express.Router();
+var stripe = require("stripe")("sk_test_vpMQfQuiaP4jQkxlm3rwU4Cs");
 
 // fonction de calcul du total panier
-function totalCard(dataCards) {
+function totalCard(arr) {
   let total = 0   // Total panier
-  for (var i = 0; i < dataCards.length; i++) {
-    const itemTotal = dataCards[i].price * dataCards[i].qty
-    dataCards[i].total = itemTotal
+  for (var i = 0; i < arr.length; i++) {
+    const itemTotal = arr[i].price * arr[i].qty
+    arr[i].total = itemTotal
     total += itemTotal;
   }
   return total;
@@ -44,15 +45,19 @@ router.get('/', function(req, res, next) {
   console.log("Route INDEX");
 
   // Initialisation du Panier VIDE
-  if (req.session.panier == undefined) {
+  if (req.session.cardShop == undefined) {
 
     console.log("Route INDEX (initialisation)");
-    req.session.panier = [];
+    req.session.cardShop = [];
     req.session.idCard = 0;
+    req.session.basketTotal = 0;
+
+  } else {
+    // NOP
   }
 
   // Retour vers le panier SHOP
-  res.render('index', { bikes: dataBikes});
+  res.render('index', { bikes: dataBikes, nbItem:req.session.basketTotal });
 });
 
 /*
@@ -65,17 +70,18 @@ router.get('/shop', function(req, res, next) {
   console.log("Route SHOP (ADD)", req.query.idProduct);
 
   // Récupérer le panier de la session
-  let dataCards = req.session.panier;
+  let dataCards = req.session.cardShop;
 
   // ___________________________________________________________________________
   // On récupère l'id, on retouve l'indice et on ajoute l'article dans le panier
   // ou on MàJ le panier en ajoutant une unité si l'article est déjà sélectionné.
   // Rechercher le produit par son ID
   // ___________________________________________________________________________
-  const indice = dataBikes.findIndex(x => x.idProduct === req.query.idProduct);
+  const indiceBike = dataBikes.findIndex(x => x.idProduct === req.query.idProduct);
 
   // Vérifier si cet article existe dans le panier
   const indiceCard = dataCards.findIndex(x => x.idProduct === req.query.idProduct);
+  console.log(indiceBike, indiceCard, req.session);
   if (indiceCard == -1) {
 
     // Ajouter le nouvel article dans le panier
@@ -83,31 +89,33 @@ router.get('/shop', function(req, res, next) {
     dataCards.push(
       {
         idCard: idCard,
-        srcImage: dataBikes[indice].srcImage,
-        model: dataBikes[indice].model,
+        srcImage: dataBikes[indiceBike].srcImage,
+        model: dataBikes[indiceBike].model,
         qty: 1,
-        price: dataBikes[indice].price,
-        total: dataBikes[indice].price,
-        idProduct: dataBikes[indice].idProduct
+        price: dataBikes[indiceBike].price,
+        total: dataBikes[indiceBike].price,
+        idProduct: dataBikes[indiceBike].idProduct
       }
     );
-    // Sauvegarder l'ID dans la session
+    // Sauvegarder l'ID courant dans la session
     req.session.idCard = idCard;
+
   } else {
 
-    // MàJ de la quantité (+1)
-    dataCards[indice].qty += 1;
-    dataCards[indice].total = dataCards[indice].qty * dataCards[indice].price;
+    // MàJ de la quantité (+1) dans le panier (indiceCard)
+    dataCards[indiceCard].qty += 1;
+    dataCards[indiceCard].total = dataCards[indiceCard].qty * dataCards[indiceCard].price;
   }
 
   // MàJ du total panier
   let basketTotal = totalCard(dataCards);
 
   // Sauvegarder le panier dans la session
-  req.session.panier = dataCards;
+  req.session.cardShop = dataCards;
+  req.session.basketTotal = basketTotal;
 
   // Retour vers le panier SHOP
-  res.render('shop', { cards: dataCards, cardTotal: basketTotal });
+  res.render('index', { bikes: dataBikes, nbItem: basketTotal });
 });
 
 /*
@@ -119,10 +127,9 @@ router.get('/showCard', function(req, res, next) {
 
   console.log("Route CARD");
 
-  // Récupérer le panier de la session
-  let dataCards = req.session.panier;
-  //console.log(dataCards);
-  let basketTotal = totalCard(dataCards);
+  // Récupérer le panier de la session, total
+  const dataCards = req.session.cardShop;
+  const basketTotal = req.session.basketTotal;
 
   // Retour vers le panier SHOP
   res.render('shop', { cards: dataCards, cardTotal: basketTotal });
@@ -140,7 +147,7 @@ router.post('/refreshItem', function(req, res, next) {
   console.log('QTY:', req.body.qty);
 
   // Récupérer le panier de la session
-  let dataCards = req.session.panier;
+  let dataCards = req.session.cardShop;
 
   // On récupère l'id de l'article à modifier dans le panier
   const indice = dataCards.findIndex(x => x.idCard === parseInt(req.body.idCard));
@@ -156,7 +163,8 @@ router.post('/refreshItem', function(req, res, next) {
   let basketTotal = totalCard(dataCards);
 
   // Sauvegarder le panier dans la session
-  req.session.panier = dataCards
+  req.session.cardShop = dataCards
+  req.session.basketTotal = basketTotal;
 
   // Retour vers le panier SHOP
   res.render('shop', { cards: dataCards, cardTotal: basketTotal });
@@ -173,20 +181,57 @@ router.post('/deleteItem', function(req, res, next) {
   console.log('ID:', req.body.id)
 
   // Récupérer le panier de la session
-  let dataCards = req.session.panier;
+  let dataCards = req.session.cardShop;
 
   // Supprimer l'item du panier
   const indice = dataCards.findIndex(x => x.idCard === parseInt(req.body.idCard));
-  console.log(indice)
-
+  console.log(indice);
   dataCards.splice(indice, 1);
   let basketTotal = totalCard(dataCards);
 
   // Sauvegarder le panier dans la session
-  req.session.panier = dataCards
+  req.session.cardShop = dataCards;
+  req.session.basketTotal = basketTotal;
 
   // Retour vers le panier SHOP
   res.render('shop', { cards: dataCards, cardTotal: basketTotal });
+});
+
+/*
+  =============================================
+  ROUTE CHECKOUT
+  =============================================
+*/
+router.post('/checkout', function(req, res, next) {
+
+  process.stdout.write('\033c');  // Clear console...
+  console.log("Route CHECKOUT");
+  console.log('ID:', req.body);
+  console.log('ID:', req.session);
+
+  // Récupérer le panier de la session
+  let dataCards = req.session.cardShop;
+  let nbItem = dataCards.length;
+  let basketTotal = req.session.basketTotal;
+
+  // RAZ du panier
+  req.session.cardShop = [];
+  req.session.basketTotal = 0;
+  req.session.basketTotal = 0;
+
+
+  // Set your secret key: remember to change this to your live secret key in production
+  // See your keys here: https://dashboard.stripe.com/account/apikeys
+  const charge = stripe.charges.create({
+    amount: basketTotal * 100,
+    description : 'Votre commande N° 3245',
+    currency: 'EUR',
+    source: 'tok_visa',
+    receipt_email: 'tlarche@gmail.com',
+  });
+
+  // Retour vers le panier SHOP
+  res.render('end-trans', { cardTotal: basketTotal, nbItem: nbItem });
 });
 
 /*

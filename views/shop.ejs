@@ -9,6 +9,7 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
     <script src="https://use.fontawesome.com/a7ec7986bf.js"></script>
   </head>
+
   <body>
 
     <div class="container">
@@ -35,6 +36,7 @@
         <div class="col-2 col-sm-1">Suppr</div>
       </div>
 
+      <!-- BASKET 0, n CARDS-->
       <div class="row card-product">
 
         <!-- FOR CARDS -->
@@ -46,10 +48,12 @@
           <form action="/refreshItem" method="post">
             <div class="row">
                 <div class="col-8">
+                  <!-- CHAMP QTY -->
                   <input type="hidden" name="idCard" value="<%=cards[i].idCard%>">
                   <input type="text" name="qty" value="<%=cards[i].qty%>" class="form-control form-control-sm">
                 </div>
                 <div class="col-4">
+                  <!-- BOUTON REFRESH-->
                   <button type="submit" class="btn btn-outline-info btn-sm" name="button">
                     <i class="fa fa-refresh" aria-hidden="true"></i>
                   </button>
@@ -59,6 +63,8 @@
         </div>
         <div class="col-2 col-sm-1"><%=cards[i].price %> €</div>
         <div class="col-1 d-none d-sm-block"><%=cards[i].total %>€</div>
+
+        <!-- BOUTON DELETE-->
         <div class="col-2 col-sm-1">
           <form action="/deleteItem" method="post">
             <input type="hidden" name="idCard" value="<%=cards[i].idCard%>" class="form-control form-control-sm">
@@ -71,6 +77,7 @@
       <!-- END FOR CARDS -->
 
       </div>
+      <!-- BASKET 0, n CARDS-->
 
       <div class="row" id="card-total">
         <div class="col-8 col-sm-10 text-right">Total basket: </div>
@@ -78,7 +85,22 @@
       </div>
 
       <div class="row" id="card-checkout">
-        <div class="col-12 text-right"><button type="button" class="btn btn-outline-info btn-sm" name="button">Checkout</button></div>
+        <div class="col-12 text-right">
+          <!--button type="button" class="btn btn-outline-info btn-sm" name="button">Checkout</button-->
+          <form action="/checkout" method="POST">
+            <script
+            src="https://checkout.stripe.com/checkout.js" class="stripe-button"
+            data-key="pk_test_DQ6Ddc9IgqXRM8RkNAorXeDc"
+            data-amount="<%= cardTotal * 100 %>"
+            data-name="Stripe.com"
+            data-description="Widget"
+            data-image="https://stripe.com/img/documentation/checkout/marketplace.png"
+            data-locale="auto"
+            data-currency="EUR"
+            data-zip-code="false">
+            </script>
+          </form>
+        </div>
       </div>
 
     </div>
