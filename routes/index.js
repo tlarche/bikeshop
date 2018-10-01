@@ -217,8 +217,6 @@ router.post('/checkout', function(req, res, next) {
   // RAZ du panier
   req.session.cardShop = [];
   req.session.basketTotal = 0;
-  req.session.basketTotal = 0;
-
 
   // Set your secret key: remember to change this to your live secret key in production
   // See your keys here: https://dashboard.stripe.com/account/apikeys
